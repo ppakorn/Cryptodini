@@ -12,6 +12,7 @@ import (
 
 type UserID = int
 type Coin = cryptodiniservice.Coin
+type Portfolio = cryptodiniservice.Portfolio
 
 type BuyOrders struct {
 	Orders []Coin
@@ -42,7 +43,7 @@ type coin_USDT struct {
 type AssetManagerService interface {
 	Deposit(uid UserID, amount float64) BuyOrders
 	Withdraw(uid UserID, amount float64) SellOrders
-	// GetPort(uid UserID) Portfolio
+	GetPort(uid UserID) Portfolio
 }
 
 func (robo Robo) Deposit(uid UserID, amount float64) BuyOrders {
@@ -159,6 +160,13 @@ func portWithUsdtValue(coins []Coin, coinValuesMap map[string]float64) []coin_US
 		coinWithUsdt = append(coinWithUsdt, coin_USDT{Coin: coin, usdt: usdt})
 	}
 	return coinWithUsdt
+}
+
+func (robo Robo) GetPort(uid UserID) Portfolio {
+	// I don't think GetPort should be in robo
+	// robo should get port from Cryptodini to calculate how to adjust port
+	// not the other way around
+	return Portfolio{}
 }
 
 func main() {
