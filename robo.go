@@ -35,9 +35,9 @@ type cmcCoins struct {
 	Coin []cmcCoin `json:"data"`
 }
 
-type coin_USDT struct {
+type coin_TUSD struct {
 	Coin
-	usdt float64
+	tusd float64
 }
 
 type AssetManagerService interface {
@@ -81,40 +81,40 @@ func best5In24hr() (*cmcCoins, error) {
 }
 
 func (robo Robo) Withdraw(uid UserID, amount float64) SellOrders {
-	// algorithm for sell is to sell coins that have highest usdt value
+	// algorithm for sell is to sell coins that have highest tusd value
 	// in order to sell least type of coins possible
 	port := cryptodiniservice.GetPort(uid)
 	coins := port.Coins
-	coinValuesMap, _ := getCoinsPriceInUSDT(coins)
-	portWithValue := portWithUsdtValue(coins, coinValuesMap)
+	coinValuesMap, _ := getCoinsPriceInTUSD(coins)
+	portWithValue := portWithTusdValue(coins, coinValuesMap)
 	sort.Slice(portWithValue, func(i, j int) bool {
-		return portWithValue[i].usdt > portWithValue[j].usdt
+		return portWithValue[i].tusd > portWithValue[j].tusd
 	})
 
 	neededAmount := amount
 	var orders []Coin
 	for i := 0; i < len(portWithValue); i++ {
-		if neededAmount < portWithValue[i].usdt {
-			usdtToWithdraw := portWithValue[i].Amount * neededAmount / portWithValue[i].usdt
-			coin := Coin{Symbol: portWithValue[i].Symbol, Amount: usdtToWithdraw}
+		if neededAmount < portWithValue[i].tusd {
+			tusdToWithdraw := portWithValue[i].Amount * neededAmount / portWithValue[i].tusd
+			coin := Coin{Symbol: portWithValue[i].Symbol, Amount: tusdToWithdraw}
 			orders = append(orders, coin)
 			break
 		} else {
 			coin := Coin{Symbol: portWithValue[i].Symbol, Amount: portWithValue[i].Amount}
 			orders = append(orders, coin)
-			neededAmount -= portWithValue[i].usdt
+			neededAmount -= portWithValue[i].tusd
 		}
 	}
 	return SellOrders{Orders: orders}
 }
 
-func getCoinsPriceInUSDT(coins []Coin) (map[string]float64, error) {
+func getCoinsPriceInTUSD(coins []Coin) (map[string]float64, error) {
 	request, err := http.NewRequest("GET", "https://pro-api.coinmarketcap.com/v1/cryptocurrency/quotes/latest", nil)
 	request.Header.Set("X-CMC_PRO_API_KEY", "cafc2287-ecc7-46f9-9aeb-40509deb3f6b")
 
 	q := request.URL.Query()
 	q.Add("symbol", coinsToSymbolsString(coins))
-	q.Add("convert", "USDT")
+	q.Add("convert", "TUSD")
 	request.URL.RawQuery = q.Encode()
 
 	client := &http.Client{}
@@ -127,7 +127,7 @@ func getCoinsPriceInUSDT(coins []Coin) (map[string]float64, error) {
 		var coinsMap map[string]interface{}
 		json.Unmarshal(data, &coinsMap)
 		coinsMap = coinsMap["data"].(map[string]interface{})
-		return coinsMapToCmcCoinUSDT(coinsMap), nil
+		return coinsMapToCmcCoinTUSD(coinsMap), nil
 	}
 }
 
@@ -141,25 +141,25 @@ func coinsToSymbolsString(coins []Coin) string {
 	return str.String()
 }
 
-func coinsMapToCmcCoinUSDT(coinsMap map[string]interface{}) map[string]float64 {
-	usdtMap := make(map[string]float64)
+func coinsMapToCmcCoinTUSD(coinsMap map[string]interface{}) map[string]float64 {
+	tusdMap := make(map[string]float64)
 	for key := range coinsMap {
 		value := coinsMap[key].(map[string]interface{})
 		quotes := value["quote"].(map[string]interface{})
-		usdt := quotes["USDT"].(map[string]interface{})
-		price := usdt["price"].(float64)
-		usdtMap[key] = price
+		tusd := quotes["TUSD"].(map[string]interface{})
+		price := tusd["price"].(float64)
+		tusdMap[key] = price
 	}
-	return usdtMap
+	return tusdMap
 }
 
-func portWithUsdtValue(coins []Coin, coinValuesMap map[string]float64) []coin_USDT {
-	var coinWithUsdt []coin_USDT
+func portWithTusdValue(coins []Coin, coinValuesMap map[string]float64) []coin_TUSD {
+	var coinWithTusd []coin_TUSD
 	for _, coin := range coins {
-		usdt := coinValuesMap[coin.Symbol] * coin.Amount
-		coinWithUsdt = append(coinWithUsdt, coin_USDT{Coin: coin, usdt: usdt})
+		tusd := coinValuesMap[coin.Symbol] * coin.Amount
+		coinWithTusd = append(coinWithTusd, coin_TUSD{Coin: coin, tusd: tusd})
 	}
-	return coinWithUsdt
+	return coinWithTusd
 }
 
 func (robo Robo) GetPort(uid UserID) Portfolio {
